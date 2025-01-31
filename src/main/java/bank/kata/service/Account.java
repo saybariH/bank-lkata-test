@@ -9,26 +9,78 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
 public class Account implements AccountService{
-    Properties properties = new Properties();
-    private DateTimeFormatter dateFormat;
     private TransactionRepository transactionRepository;
+    private Properties properties = new Properties();
+    private DateTimeFormatter dateFormat;
 
+    /**
+     * Constructs an {@code Account} instance, initializes the transaction repository,
+     * and loads message properties from the `messages.properties` resource file.
+     *
+     * @param transactionRepository The repository for managing transactions.
+     * @throws RuntimeException If the `messages.properties` file is not found or fails to load.
+     * @author Hamza saybari
+     */
     public Account( TransactionRepository transactionRepository) {
+        // initialize the transactionRepository
         this.transactionRepository = transactionRepository;
-
-        // Load the properties file
+        // Load messages.properties output config file and fill the properties attribute
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("messages.properties")) {
             if (input == null) {
-                System.out.println("Sorry, unable to find config.properties");
+                throw new IOException("Unable to find messages.properties resource file");
             } else {
-                properties.load(input);  // Load properties correctly
+                this.properties.load(input);
             }
         } catch (IOException e) {
-            e.printStackTrace();  // Properly handle IOException
+            e.printStackTrace();
         }
         this.dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
     }
 
+    /**
+     * Deposits a specified amount into the account.
+     *
+     * @param amount The amount to be deposited. Must be a positive integer.
+     */
+    @Override
+    public void deposit(int amount) {
+        transactionRepository.saveTransaction(amount);
+    }
+
+    /**
+     * Withdraws a specified amount from the account.
+     *
+     * @param amount The amount to be withdrawn. Must be a positive integer.
+     *               The method internally stores it as a negative transaction.
+     */
+    @Override
+    public void withdraw(int amount) {
+        transactionRepository.saveTransaction(-amount);
+    }
+
+    /**
+     * Prints the account statement, showing all transactions in order,
+     * along with their corresponding balances.
+     * The output format is determined by the messages stored in the `messages.properties` file.
+     */
+    @Override
+    public void printStatement() {
+        System.out.println(getText("statement.header"));
+        transactionRepository.findAllTransactions()
+                .stream()
+                .reduce(0, (balance, transaction) -> {
+                    int newBalance = balance + transaction.getAmount();
+                    System.out.println(formatTransaction(transaction, newBalance));
+                    return newBalance;
+                }, Integer::sum);
+    }
+    /**
+     * Formats a transaction entry into a readable statement row.
+     *
+     * @param transaction The transaction to be formatted.
+     * @param balance     The current balance after applying this transaction.
+     * @return A formatted transaction string.
+     */
     public String formatTransaction(Transaction transaction, int balance) {
         return MessageFormat.format(
                 getText("statement.row"),
@@ -38,26 +90,13 @@ public class Account implements AccountService{
         );
     }
 
+    /**
+     * Retrieves a localized message from the properties file.
+     *
+     * @param key The key corresponding to the message in `messages.properties`.
+     * @return The localized message text, or {@code null} if the key is not found.
+     */
     public String getText(String key) {
         return properties.getProperty(key);
-    }
-    @Override
-    public void deposit(int amount) {
-        transactionRepository.saveTransaction(amount);
-    }
-
-    @Override
-    public void withdraw(int amount) {
-        transactionRepository.saveTransaction(-amount);
-    }
-
-    @Override
-    public void printStatement() {
-        System.out.println(getText("statement.header"));
-        int balance = 0;
-        for (Transaction transaction : transactionRepository.findAllTransactions()) {
-            balance += transaction.getAmount();
-            System.out.println(formatTransaction(transaction, balance));
-        }
     }
 }

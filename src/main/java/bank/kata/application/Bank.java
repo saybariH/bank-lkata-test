@@ -14,10 +14,16 @@ public class Bank {
 
         AccountService accountService = new Account(new TransactionRepository());
 
-        accountService.deposit( 2231);
-        accountService.withdraw( 131);
-        accountService.printStatement();
+        accountService.deposit( 10000);
+        accountService.withdraw( 500);
+        accountService.deposit( 1000);
+        accountService.deposit( 2000);
+        accountService.withdraw( 100);
+        accountService.withdraw( 200);
+        accountService.withdraw( 300);
+        accountService.withdraw( 500);
 
+        accountService.printStatement();
     }
 
 }
